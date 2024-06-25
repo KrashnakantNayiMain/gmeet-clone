@@ -31,4 +31,13 @@ export class Candidate {
     async setAnswer(offer: string, roomId: string) {
         return this.callManager.saveAnswer(offer, roomId);
     }
+
+    async removeCandidate(socket: Socket){
+        return await CandidateModal.findOneAndDelete({socketId : socket.id});
+    }
+
+    async getCandidateCall(socket: Socket, roomId: string) {
+        let call= await this.callManager.getCallByRoomId(roomId);
+        return call;
+    }
 }
