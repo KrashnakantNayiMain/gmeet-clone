@@ -1,12 +1,15 @@
 .main {
     padding: 50px 20px;
-    background-color: #f1f3f4;
+    height: 70vh;
 }
 
 .main-content {
     max-width: 600px;
     margin: 0 auto;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .main-actions {
@@ -21,10 +24,23 @@
     border-radius: 4px;
     cursor: pointer;
     margin: 0px 10px;
+    font-weight: 600;
 }
 
 .main-actions button:hover {
     background-color: #1558b6;
+}
+
+button:disabled,
+button[disabled]{
+    background-color: white;
+    color: #666666;
+    border: 1px solid #666666;
+}
+.main-actions button:disabled:hover,
+.main-actions button[disabled]:hover{
+    background-color: white;
+    color: #666666;
 }
 
 .main-actions input {
