@@ -28,12 +28,24 @@ io.on('connection', (socket: Socket) => {
     candidate.addCandidate(call.roomId, socket);
   });
 
-  socket.on("send-offer", async ({ description, roomId }) => {
+  socket.on("get-offer-and-save-in-current-socket", async ({ roomId }) => {
+    let candidateCall = await candidate.getCandidateCall(socket, roomId);
+    if(candidateCall?.offer != null) {
+      socket.emit('set-offer-and-send-answer', { 
+        currentCandidate : socket.id,
+        description : JSON.parse(candidateCall?.offer)
+      })
+    } else {
+      console.log('Offer not found for roomId : '+ roomId);
+    }
+  });
+
+  socket.on("save-offer", async ({ description, roomId }) => {
     await candidate.setOffer(JSON.stringify(description), roomId);
     let otherCandidates = await candidate.getOtherCandidates(socket, roomId);
     otherCandidates.forEach((otherCandidate) => {
       if(otherCandidate.socketId && otherCandidate.socketId != socket.id) {
-        io.to(otherCandidate.socketId).emit('accept-offer', { 
+        io.to(otherCandidate.socketId).emit('set-offer-and-send-answer', { 
           currentCandidate : socket.id,
           description
         });
@@ -42,8 +54,34 @@ io.on('connection', (socket: Socket) => {
   });
 
   socket.on("send-answer", async ({ description, roomId }) => {
-    console.log('send-answer');
-  });  
+    await candidate.setAnswer(JSON.stringify(description), roomId);
+    let otherCandidates = await candidate.getOtherCandidates(socket, roomId);
+    otherCandidates.forEach((otherCandidate) => {
+      if(otherCandidate.socketId && otherCandidate.socketId != socket.id) {
+        io.to(otherCandidate.socketId).emit('get-answer-and-save-remote', { 
+          currentCandidate : socket.id,
+          description
+        });
+      }
+    });
+  });
+
+  socket.on("iceCandidate", async ({addCandidate, roomId}) => {
+    let otherCandidates = await candidate.getOtherCandidates(socket, roomId);
+    otherCandidates.forEach((otherCandidate) => {
+      if (otherCandidate.socketId && otherCandidate.socketId !== socket.id) {
+        io.to(otherCandidate.socketId).emit("iceCandidateReply", {
+          currentCandidate : socket.id,
+          candidate : addCandidate 
+        });
+      }
+    });
+  });
+
+  socket.on('disconnect', async () => {
+    await candidate.removeCandidate(socket);
+ });
+
 });
 
 // Error handling for the socket connection

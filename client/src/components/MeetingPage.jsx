@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./css/MeetingPage.css";
 import Footer from "./Footer";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Video } from "./Video";
 import { v4 as uuidv4 } from "uuid";
 import { io } from "socket.io-client";
@@ -17,8 +17,10 @@ const SERVER_URL = "http://localhost:3000";
 
 function MeetingPage() {
   const [pc] = useState(new RTCPeerConnection(servers));
-  const [localStream, setLocalSteram] = useState(null);
+  const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(new MediaStream());
+  const location = useLocation();
+  const newMeeting = location.state?.newMeeting;
 
   const localStreamRef = useRef(null);
   const remoteStreamRef = useRef(null);
@@ -26,66 +28,112 @@ function MeetingPage() {
   const [socket, setSocket] = useState(null);
   const params = useParams();
   const roomId = params.roomId;
+  const navigate = useNavigate();
 
-  const handleStartCam = async () => {
-    const stream = await window.navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true,
-    });
-    setLocalSteram(stream);
+  if(localStorage.getItem('new-meeting') == null && localStorage.getItem('join-meeting')) {
+    localStorage.setItem('join-meeting', 1);
+  }
 
-    stream.getTracks().forEach((track) => {
-      pc.addTrack(track, stream);
-    });
+  useEffect(() => {
+    const handleStartCam = async () => {
+      const stream = await window.navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      setLocalStream(stream);
+
+      stream.getTracks().forEach((track) => {
+        pc.addTrack(track, stream);
+      });
+
+      if (localStreamRef.current) {
+        localStreamRef.current.srcObject = stream;
+      }
+    };
+
+    handleStartCam();
 
     pc.ontrack = (event) => {
       event.streams[0].getTracks().forEach((track) => {
         remoteStream.addTrack(track);
       });
+
+      if (remoteStreamRef.current) {
+        remoteStreamRef.current.srcObject = remoteStream;
+      }
     };
 
-    if (localStreamRef.current) {
-      localStreamRef.current.srcObject = stream;
-    }
+    pc.onicecandidate = ({ candidate }) => {
+      console.log('Candidate added.');
+      if (candidate && socket) {
+        socket.emit("iceCandidate", { addCandidate: candidate, roomId });
+      }
+    };
 
-    if(socket){
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      socket.emit("send-offer", { description: pc.localDescription, roomId});
-    }
-  };
+  }, [pc, socket, roomId, remoteStream]);
 
   useEffect(() => {
-    const socket = io.connect(SERVER_URL, {
+    const s = io.connect(SERVER_URL, {
       transports: ['websocket']
     });
-    socket.on("connect_error", (err) => {
+
+    s.on("connect_error", (err) => {
       console.log(`connect_error due to ${err.message}`);
     });
 
-    socket.on("connect", () => {
-      socket.emit("join-call", { roomId });
+    s.on("connect", () => {
+      s.emit("join-call", { roomId });
     });
-    setSocket(socket);
 
-    socket.on("accept-offer", async ({ currentCandidate, description}) => {
-      console.log("acccept offer ", currentCandidate, socket.id);
-      if(currentCandidate != socket.id) {
+    s.on("get-answer-and-save-remote", async ({ description }) => {
+      try {
+        if(!pc.remoteDescription) {
+          await pc.setRemoteDescription(description);
+        }
+      } catch (error) {
+        console.error("Error setting get-answer-and-save-remote:", error);
+      }
+    });
+
+    s.on("set-offer-and-send-answer", async ({ description }) => {
+      try {
+        if(!pc.remoteDescription) {
+          await pc.setRemoteDescription(description);
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          s.emit("send-answer", { description: pc.localDescription, roomId });
+        }
+      } catch (error) {
+        console.error("Error setting get-offer-and-send-answer:", error);
+      }
+    });
+
+    s.on("iceCandidateReply", async ({ candidate }) => {
+      if (candidate) {
         try {
-          if (description.type === 'offer') {
-            await pc.setRemoteDescription(description);
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            socket.emit("send-answer", { description: pc.localDescription });
-          } else if (description.type === 'answer') {
-            await pc.setRemoteDescription(description);
-          }
+          await pc.addIceCandidate(candidate);
         } catch (error) {
-          console.error("Error setting local/remote description when accepting offer:", error);
+          console.error("Error adding received ice candidate:", error);
         }
       }
     });
-  }, [roomId]);
+
+    setSocket(s);
+  }, [pc, roomId]);
+
+  useEffect(() => {
+    if (socket && localStream) {
+      (async () => {
+        if (localStorage.getItem('new-meeting')) {
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          await socket.emit("save-offer", { description: pc.localDescription, roomId });
+        } else {
+          await socket.emit("get-offer-and-save-in-current-socket", { roomId });
+        }
+      })();
+    }
+  }, [socket, localStream, pc, roomId]);
 
   return (
     <div className="meeting-room">
@@ -94,20 +142,15 @@ function MeetingPage() {
           <Video stream={localStreamRef} />
         </div>
         <div className="video-stream remote">
-          {/* {remoteStream && <Video stream={remoteStreamRef} />} */}
+          <Video stream={remoteStreamRef} />
         </div>
       </div>
       <div className="controls-section">
-        {!localStream && (
-          <button className="control-button" onClick={handleStartCam}>
-            Start Camera
-          </button>
-        )}
-        {/* <button className="control-button">Mute</button>
+        <button className="control-button">Mute</button>
         <button className="control-button">Unmute</button>
-        <button className="control-button" onClick={(e) => navigator("/")}>
+        <button className="control-button" onClick={() => navigate("/")}>
           Leave Meeting
-        </button> */}
+        </button>
       </div>
       <Footer />
     </div>

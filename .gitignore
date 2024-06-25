@@ -1,4 +1,6 @@
 /client/node_modules
+/client/dist
 /server/node_modules
+/server/dist
 /id_rsa_personal
 /id_rsa_personal.pub
