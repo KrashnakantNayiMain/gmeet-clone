@@ -52,8 +52,14 @@ export default function LandingPage() {
         localStreamRef.current.srcObject = stream;
       }
     };
+    startCam();
+
     return () => {
-      startCam();
+      if (localStreamRef.current && localStreamRef.current.srcObject) {
+        localStreamRef.current.srcObject.getTracks().forEach((track) => {
+          track.stop();
+        });
+      }
     };
   }, []);
 
