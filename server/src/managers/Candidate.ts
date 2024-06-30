@@ -11,11 +11,18 @@ export class Candidate {
     async addCandidate(roomId: string, candidate: Socket) {
         let call = await this.callManager.joinCall(roomId);
         if(call) {
-            const newCandidate = new CandidateModal({
-                callId: call?._id,
-                socketId: candidate.id
-            });
-            await newCandidate.save();
+            try {
+                const newCandidate = new CandidateModal({
+                    callId: call?._id,
+                    socketId: candidate.id
+                });
+                await newCandidate.save();
+            }catch(error : any){
+                if(error.code == 11000){
+                    console.log('Candidate Already Exists '+candidate.id);
+                }
+            }
+            return call;
         }
     }
 

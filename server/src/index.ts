@@ -20,20 +20,13 @@ const candidate = new Candidate();
 
 io.on('connection', (socket: Socket) => {
   console.log('a user connected: ' + socket.id);
-  socket.on('disconnect', () => {
-    
-  });
-
-  socket.on('join-call', (call: CallInt) => {
-    candidate.addCandidate(call.roomId, socket);
-  });
 
   socket.on("get-offer-and-save-in-current-socket", async ({ roomId }) => {
     let candidateCall = await candidate.getCandidateCall(socket, roomId);
-    if(candidateCall?.offer != null) {
+    if(candidateCall?.offer?.type == 'offer') {
       socket.emit('set-offer-and-send-answer', { 
         currentCandidate : socket.id,
-        description : JSON.parse(candidateCall?.offer)
+        description : candidateCall?.offer
       })
     } else {
       console.log('Offer not found for roomId : '+ roomId);
@@ -41,7 +34,8 @@ io.on('connection', (socket: Socket) => {
   });
 
   socket.on("save-offer", async ({ description, roomId }) => {
-    await candidate.setOffer(JSON.stringify(description), roomId);
+    await candidate.addCandidate(roomId, socket);
+    await candidate.setOffer(description, roomId);
     let otherCandidates = await candidate.getOtherCandidates(socket, roomId);
     otherCandidates.forEach((otherCandidate) => {
       if(otherCandidate.socketId && otherCandidate.socketId != socket.id) {
@@ -54,7 +48,8 @@ io.on('connection', (socket: Socket) => {
   });
 
   socket.on("send-answer", async ({ description, roomId }) => {
-    await candidate.setAnswer(JSON.stringify(description), roomId);
+    await candidate.addCandidate(roomId, socket);
+    await candidate.setAnswer(description, roomId);
     let otherCandidates = await candidate.getOtherCandidates(socket, roomId);
     otherCandidates.forEach((otherCandidate) => {
       if(otherCandidate.socketId && otherCandidate.socketId != socket.id) {
@@ -89,7 +84,7 @@ io.on('error', (error) => {
   console.error('Socket.io error:', error);
 });
 
-mongoose.connect('mongodb://localhost:27017/node-gmeet-clone', { dbName: "gmeet-clone" })
+mongoose.connect('mongodb+srv://krashnakantnayi:NMX57OwrcGlkv3l3@gmeet-cluster.xb9yfnj.mongodb.net/?appName=Gmeet-cluster', { dbName: "gmeet-clone" })
   .then(() => {
     console.log('Connected to MongoDB');
   })

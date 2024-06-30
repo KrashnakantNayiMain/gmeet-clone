@@ -6,13 +6,13 @@ const candidatesSchema = new mongoose.Schema({
     sdpMid: {type: String},
     usernameFragment: {type: String},
     callId: { type: String},
-    socketId : {type: String}
+    socketId : {type: String, unique : true}
 });
 
 const callsSchema = new mongoose.Schema({
-    callId: {type: String}, 
-    offer: {type: String},
-    answer: {type: String}
+    callId: {type: String, unique : true}, 
+    offer: {type: mongoose.Schema.Types.Mixed, default: {}},
+    answer: {type: mongoose.Schema.Types.Mixed, default: {}}
 });
   
 export const CandidateModal = mongoose.model('Candidate', candidatesSchema);
