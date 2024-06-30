@@ -30,7 +30,7 @@ function MeetingPage() {
   const roomId = params.roomId;
   const navigate = useNavigate();
 
-  if(localStorage.getItem('new-meeting') == null && localStorage.getItem('join-meeting')) {
+  if(localStorage.getItem('new-meeting') == null && localStorage.getItem('join-meeting') == null) {
     localStorage.setItem('join-meeting', 1);
   }
 
@@ -64,7 +64,6 @@ function MeetingPage() {
     };
 
     pc.onicecandidate = ({ candidate }) => {
-      console.log('Candidate added.');
       if (candidate && socket) {
         socket.emit("iceCandidate", { addCandidate: candidate, roomId });
       }
@@ -81,13 +80,15 @@ function MeetingPage() {
       console.log(`connect_error due to ${err.message}`);
     });
 
-    s.on("connect", () => {
-      s.emit("join-call", { roomId });
-    });
+    // s.on("connect", () => {
+    //   s.emit("join-call", { roomId });
+    // });
 
     s.on("get-answer-and-save-remote", async ({ description }) => {
       try {
+        //console.log("get-answer-and-save-remote");
         if(!pc.remoteDescription) {
+          //console.log(description);
           await pc.setRemoteDescription(description);
         }
       } catch (error) {
@@ -97,7 +98,9 @@ function MeetingPage() {
 
     s.on("set-offer-and-send-answer", async ({ description }) => {
       try {
-        if(!pc.remoteDescription) {
+        //console.log(!pc.remoteDescription, description.type, localStorage.getItem('join-meeting'));
+        if(!pc.remoteDescription && description.type == 'offer' && localStorage.getItem('join-meeting')) {
+          //console.log(description);
           await pc.setRemoteDescription(description);
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
@@ -109,7 +112,7 @@ function MeetingPage() {
     });
 
     s.on("iceCandidateReply", async ({ candidate }) => {
-      if (candidate) {
+      if (candidate && pc.remoteDescription != null) {
         try {
           await pc.addIceCandidate(candidate);
         } catch (error) {
@@ -124,7 +127,7 @@ function MeetingPage() {
   useEffect(() => {
     if (socket && localStream) {
       (async () => {
-        if (localStorage.getItem('new-meeting')) {
+        if (localStorage.getItem('new-meeting') != null) {
           const offer = await pc.createOffer();
           await pc.setLocalDescription(offer);
           await socket.emit("save-offer", { description: pc.localDescription, roomId });
