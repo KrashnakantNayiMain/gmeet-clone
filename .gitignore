@@ -1,6 +1,7 @@
 /client/node_modules
 /client/dist
+/client/.env
 /server/node_modules
 /server/dist
-/id_rsa_personal
-/id_rsa_personal.pub
+/server/.env
+gmee-clone.pem
