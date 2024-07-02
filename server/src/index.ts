@@ -3,9 +3,11 @@ import { createServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import mongoose from 'mongoose';
 import { Candidate } from './managers/Candidate';
+import dotenv from 'dotenv';
 
 const app = express();
 const server = createServer(app);
+dotenv.config();
 
 const io = new Server(server, {
   cors: {
@@ -76,12 +78,17 @@ io.on('connection', (socket: Socket) => {
 
 });
 
-// Error handling for the socket connection
 io.on('error', (error) => {
   console.error('Socket.io error:', error);
 });
 
-mongoose.connect('mongodb+srv://krashnakantnayi:NMX57OwrcGlkv3l3@gmeet-cluster.xb9yfnj.mongodb.net/?appName=Gmeet-cluster', { dbName: "gmeet-clone" })
+const mongoUrl = process.env.MONGO_URL;
+if (!mongoUrl) {
+  console.error('MongoDB connection string not found in environment variables.');
+  process.exit(1);
+}
+
+mongoose.connect(mongoUrl, { dbName: "gmeet-clone" })
   .then(() => {
     console.log('Connected to MongoDB');
   })
@@ -89,11 +96,11 @@ mongoose.connect('mongodb+srv://krashnakantnayi:NMX57OwrcGlkv3l3@gmeet-cluster.x
     console.error('Error connecting to MongoDB:', error);
   });
 
-// Error handling for the server
 server.on('error', (error) => {
   console.error('Server error:', error);
 });
 
-server.listen(3000, () => {
-  console.log('server running at http://localhost:3000');
+console.log(process.env.PORT);
+server.listen(process.env.PORT, () => {
+  console.log('server running at http://localhost:'+ `${process.env.PORT}`);
 });

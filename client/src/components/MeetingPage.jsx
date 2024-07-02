@@ -13,7 +13,6 @@ const servers = {
     },
   ],
 };
-const SERVER_URL = "http://localhost:3000";
 
 function MeetingPage() {
   const [pc] = useState(new RTCPeerConnection(servers));
@@ -72,7 +71,7 @@ function MeetingPage() {
   }, [pc, socket, roomId, remoteStream]);
 
   useEffect(() => {
-    const s = io.connect(SERVER_URL, {
+    const s = io.connect(import.meta.env.VITE_SERVER_URL, {
       transports: ['websocket']
     });
 
