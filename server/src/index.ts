@@ -13,9 +13,6 @@ const io = new Server(server, {
   }
 });
 
-interface CallInt {
-  roomId : string
-}
 const candidate = new Candidate();
 
 io.on('connection', (socket: Socket) => {

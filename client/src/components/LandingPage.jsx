@@ -75,7 +75,7 @@ export default function LandingPage() {
             style={{ height: "100%" }}
           >
             <Grid item xs={6}>
-              <Video stream={localStreamRef}></Video>
+              <Video stream={localStreamRef} pc={pc} type="local"></Video>
             </Grid>
             <Grid item xs={6} style={{ height: "100%" }}>
               <div className="main-content" style={{ height: "100%" }}>
