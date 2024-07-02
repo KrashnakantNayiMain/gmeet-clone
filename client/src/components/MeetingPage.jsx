@@ -86,9 +86,9 @@ function MeetingPage() {
 
     s.on("get-answer-and-save-remote", async ({ description }) => {
       try {
-        //console.log("get-answer-and-save-remote");
+        console.log("get-answer-and-save-remote");
         if(!pc.remoteDescription) {
-          //console.log(description);
+          console.log(description);
           await pc.setRemoteDescription(description);
         }
       } catch (error) {
@@ -98,13 +98,13 @@ function MeetingPage() {
 
     s.on("set-offer-and-send-answer", async ({ description }) => {
       try {
-        //console.log(!pc.remoteDescription, description.type, localStorage.getItem('join-meeting'));
+        console.log(!pc.remoteDescription, description.type, localStorage.getItem('join-meeting'));
         if(!pc.remoteDescription && description.type == 'offer' && localStorage.getItem('join-meeting')) {
-          //console.log(description);
+          console.log(description);
           await pc.setRemoteDescription(description);
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
-          s.emit("send-answer", { description: pc.localDescription, roomId });
+          s.emit("send-answer", { description: answer, roomId });
         }
       } catch (error) {
         console.error("Error setting get-offer-and-send-answer:", error);
@@ -142,15 +142,15 @@ function MeetingPage() {
     <div className="meeting-room">
       <div className="video-section">
         <div className="video-stream local">
-          <Video stream={localStreamRef} />
+          <Video stream={localStreamRef} pc={pc} type={"local"}/>
         </div>
         <div className="video-stream remote">
-          <Video stream={remoteStreamRef} />
+          <Video stream={remoteStreamRef} pc={pc} type={"remote"}/>
         </div>
       </div>
       <div className="controls-section">
-        <button className="control-button">Mute</button>
-        <button className="control-button">Unmute</button>
+        {/* <button className="control-button">Mute</button>
+        <button className="control-button">Unmute</button> */}
         <button className="control-button" onClick={() => navigate("/")}>
           Leave Meeting
         </button>
